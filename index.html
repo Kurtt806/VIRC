@@ -183,198 +183,189 @@
     <div id="uploadStatus"></div>
 
     <p><b>Hệ thống:</b></p>
-    
+
 
 <div id="sysinfo" style="margin-top:15px; padding:15px; background:#1f1f1f; border:1px solid #444; border-radius:10px;">
-  <h3 style="color:#ffd700; margin-bottom:10px;">📟 Thông tin hệ thống</h3>
-  <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-    <p>Chip ID: <span id="chip_id">---</span></p>
-    <p>MAC: <span id="mac_addr">---</span></p>
-    <p>Flash Size: <span id="flash_size">---</span></p>
-    <p>Free Heap: <span id="heap_free">---</span></p>
-    <p>CPU Freq: <span id="cpu_freq">---</span></p>
-    <p>Uptime: <span id="uptime">---</span></p>
-  </div>
+      <h3 style="color:#ffd700; margin-bottom:10px;">📟 Thông tin hệ thống</h3>
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+        <p>Chip ID: <span id="chip_id">---</span></p>
+        <p>MAC: <span id="mac_addr">---</span></p>
+        <p>Flash Size: <span id="flash_size">---</span></p>
+        <p>Free Heap: <span id="heap_free">---</span></p>
+        <p>CPU Freq: <span id="cpu_freq">---</span></p>
+        <p>Uptime: <span id="uptime">---</span></p>
+      </div>
 </div>
+      <canvas id="cpuChart" width="600" height="150"></canvas>
+      <p><b>Console Serial:</b></p>
+      <pre id="consoleBox"
+        style="background:#111; color:#0f0; padding:10px; height:150px; overflow:auto; border-radius:6px;"></pre>
 
-  <p>Chip ID: <span id="chip_id">---</span></p>
-  <p>MAC: <span id="mac_addr">---</span></p>
-  <p>Flash Size: <span id="flash_size">---</span></p>
-  <p>Free Heap: <span id="heap_free">---</span></p>
-  <p>CPU Freq: <span id="cpu_freq">---</span></p>
-  <p>Uptime: <span id="uptime">---</span></p>
-</div>
+    </div>
 
-    <canvas id="cpuChart" width="600" height="150"></canvas>
-    <p><b>Console Serial:</b></p>
-    <pre id="consoleBox"
-      style="background:#111; color:#0f0; padding:10px; height:150px; overflow:auto; border-radius:6px;"></pre>
+    <div class="logo-overlay" id="logoLayer">
+      <img src="logo_vi3d.jpeg" alt="VI3D Logo">
+    </div>
 
-  </div>
+    <script>
+      const ws = new WebSocket(`ws://${location.host}/ws`);
+      const cpuHistory = [];
+      const maxDataPoints = 10;
 
-  <div class="logo-overlay" id="logoLayer">
-    <img src="logo_vi3d.jpeg" alt="VI3D Logo">
-  </div>
+      const canvas = document.getElementById("cpuChart");
+      const ctx = canvas.getContext("2d");
 
-  <script>
-    const ws = new WebSocket(`ws://${location.host}/ws`);
-    const cpuHistory = [];
-    const maxDataPoints = 10;
+      function drawCPUGraph(data) {
+        const w = canvas.width;
+        const h = canvas.height;
 
-    const canvas = document.getElementById("cpuChart");
-    const ctx = canvas.getContext("2d");
+        ctx.clearRect(0, 0, w, h);
 
-    function drawCPUGraph(data) {
-      const w = canvas.width;
-      const h = canvas.height;
-
-      ctx.clearRect(0, 0, w, h);
-
-      ctx.strokeStyle = "#666";
-      ctx.beginPath();
-      ctx.moveTo(0, h);
-      ctx.lineTo(w, h);
-      ctx.stroke();
-
-      ctx.beginPath();
-      ctx.strokeStyle = "#008CBA";
-      ctx.lineWidth = 2;
-      data.forEach((val, i) => {
-        const x = (i / (maxDataPoints - 1)) * w;
-        const y = h - (val / 100) * h;
-        if (i === 0) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
-      });
-      ctx.stroke();
-
-      ctx.fillStyle = "#00bcd4";
-      data.forEach((val, i) => {
-        const x = (i / (maxDataPoints - 1)) * w;
-        const y = h - (val / 100) * h;
+        ctx.strokeStyle = "#666";
         ctx.beginPath();
-        ctx.arc(x, y, 3, 0, 2 * Math.PI);
-        ctx.fill();
-      });
-    }
+        ctx.moveTo(0, h);
+        ctx.lineTo(w, h);
+        ctx.stroke();
 
-    
-ws.onmessage = e => {
-  if (e.data.startsWith("[LOG]")) {
-    appendToConsole(e.data.replace("[LOG]", ""));
-    return;
-  }
-
-  if (e.data.startsWith("[SYSINFO]")) {
-    const sysData = JSON.parse(e.data.replace("[SYSINFO]", ""));
-    document.getElementById("chip_id").innerText = sysData.chip_id || "N/A";
-    document.getElementById("mac_addr").innerText = sysData.mac || "N/A";
-    document.getElementById("flash_size").innerText = sysData.flash_size + " KB";
-    document.getElementById("heap_free").innerText = sysData.heap_free + " B";
-    document.getElementById("cpu_freq").innerText = sysData.cpu_freq + " MHz";
-    document.getElementById("uptime").innerText = sysData.uptime;
-    return;
-  }
-
-  if (e.data.startsWith("[EFFECT_LIST]")) {
-    const effects = e.data.replace("[EFFECT_LIST]", "").split(",");
-    const btnContainer = document.getElementById("effectButtons");
-    btnContainer.innerHTML = "";
-    effects.forEach(effect => {
-      const btn = document.createElement("button");
-      btn.innerText = `✨ ${effect}`;
-      btn.onclick = () => sendCommand(effect);
-      btnContainer.appendChild(btn);
-    });
-    return;
-  }
-};
-function sendCommand(cmd) {
-      if (ws.readyState === WebSocket.OPEN) {
-        ws.send(cmd);
-        appendToConsole(`[CMD] ${cmd}`);
-      } else {
-        appendToConsole(`[ERR] WebSocket chưa sẵn sàng`);
-      }
-    }
-
-    function appendToConsole(line) {
-      const logBox = document.getElementById("consoleBox");
-      logBox.textContent += line + "\n";
-      logBox.scrollTop = logBox.scrollHeight;
-    }
-
-    function setBrightness() {
-      const b = document.getElementById("brightnessInput").value;
-      sendCommand("SET_BRIGHTNESS:" + b);
-    }
-
-    const uploadBox = document.getElementById("uploadBox");
-    const fileInput = document.getElementById("configFile");
-
-    uploadBox.addEventListener("click", () => fileInput.click());
-    uploadBox.addEventListener("dragover", e => {
-      e.preventDefault();
-      uploadBox.classList.add("dragover");
-    });
-    uploadBox.addEventListener("dragleave", () => {
-      uploadBox.classList.remove("dragover");
-    });
-    uploadBox.addEventListener("drop", e => {
-      e.preventDefault();
-      uploadBox.classList.remove("dragover");
-      if (e.dataTransfer.files.length) {
-        uploadFile(e.dataTransfer.files[0]);
-      }
-    });
-
-    fileInput.addEventListener("change", () => {
-      if (fileInput.files.length) {
-        uploadFile(fileInput.files[0]);
-      }
-    });
-
-    function uploadFile(file) {
-      const formData = new FormData();
-      formData.append("configFile", file);
-      fetch("/upload", { method: "POST", body: formData })
-        .then(r => r.text())
-        .then(result => {
-          document.getElementById("uploadStatus").style.color = "green";
-          document.getElementById("uploadStatus").innerText = "✅ Tải lên thành công!";
-          setTimeout(() => { document.getElementById("uploadStatus").innerText = ""; }, 3000);
-
-          loadEffectButtons(); // ⚠️ tải lại nút hiệu ứng
-        })
-        .catch(error => {
-          document.getElementById("uploadStatus").style.color = "red";
-          document.getElementById("uploadStatus").innerText = "❌ Tải lên thất bại!";
+        ctx.beginPath();
+        ctx.strokeStyle = "#008CBA";
+        ctx.lineWidth = 2;
+        data.forEach((val, i) => {
+          const x = (i / (maxDataPoints - 1)) * w;
+          const y = h - (val / 100) * h;
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
         });
-    }
+        ctx.stroke();
+
+        ctx.fillStyle = "#00bcd4";
+        data.forEach((val, i) => {
+          const x = (i / (maxDataPoints - 1)) * w;
+          const y = h - (val / 100) * h;
+          ctx.beginPath();
+          ctx.arc(x, y, 3, 0, 2 * Math.PI);
+          ctx.fill();
+        });
+      }
 
 
-    function loadEffectButtons() {
-      fetch('/effect_list')
-        .then(res => res.json())
-        .then(effects => {
-          const container = document.getElementById("effectButtons");
-          container.innerHTML = ""; // Xóa nút cũ nếu có
+      ws.onmessage = e => {
+        if (e.data.startsWith("[LOG]")) {
+          appendToConsole(e.data.replace("[LOG]", ""));
+          return;
+        }
 
+        if (e.data.startsWith("[SYSINFO]")) {
+          const sysData = JSON.parse(e.data.replace("[SYSINFO]", ""));
+          document.getElementById("chip_id").innerText = sysData.chip_id || "N/A";
+          document.getElementById("mac_addr").innerText = sysData.mac || "N/A";
+          document.getElementById("flash_size").innerText = sysData.flash_size + " KB";
+          document.getElementById("heap_free").innerText = sysData.heap_free + " B";
+          document.getElementById("cpu_freq").innerText = sysData.cpu_freq + " MHz";
+          document.getElementById("uptime").innerText = sysData.uptime;
+          return;
+        }
+
+        if (e.data.startsWith("[EFFECT_LIST]")) {
+          const effects = e.data.replace("[EFFECT_LIST]", "").split(",");
+          const btnContainer = document.getElementById("effectButtons");
+          btnContainer.innerHTML = "";
           effects.forEach(effect => {
             const btn = document.createElement("button");
             btn.innerText = `✨ ${effect}`;
             btn.onclick = () => sendCommand(effect);
-            container.appendChild(btn);
+            btnContainer.appendChild(btn);
           });
-        })
-        .catch(err => {
-          console.error("Lỗi tải hiệu ứng:", err);
-          appendToConsole("[ERR] Không tải được danh sách hiệu ứng");
-        });
-    }
+          return;
+        }
+      };
+      function sendCommand(cmd) {
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(cmd);
+          appendToConsole(`[CMD] ${cmd}`);
+        } else {
+          appendToConsole(`[ERR] WebSocket chưa sẵn sàng`);
+        }
+      }
 
-    window.addEventListener("load", loadEffectButtons);
+      function appendToConsole(line) {
+        const logBox = document.getElementById("consoleBox");
+        logBox.textContent += line + "\n";
+        logBox.scrollTop = logBox.scrollHeight;
+      }
 
-  </script>
+      function setBrightness() {
+        const b = document.getElementById("brightnessInput").value;
+        sendCommand("SET_BRIGHTNESS:" + b);
+      }
+
+      const uploadBox = document.getElementById("uploadBox");
+      const fileInput = document.getElementById("configFile");
+
+      uploadBox.addEventListener("click", () => fileInput.click());
+      uploadBox.addEventListener("dragover", e => {
+        e.preventDefault();
+        uploadBox.classList.add("dragover");
+      });
+      uploadBox.addEventListener("dragleave", () => {
+        uploadBox.classList.remove("dragover");
+      });
+      uploadBox.addEventListener("drop", e => {
+        e.preventDefault();
+        uploadBox.classList.remove("dragover");
+        if (e.dataTransfer.files.length) {
+          uploadFile(e.dataTransfer.files[0]);
+        }
+      });
+
+      fileInput.addEventListener("change", () => {
+        if (fileInput.files.length) {
+          uploadFile(fileInput.files[0]);
+        }
+      });
+
+      function uploadFile(file) {
+        const formData = new FormData();
+        formData.append("configFile", file);
+        fetch("/upload", { method: "POST", body: formData })
+          .then(r => r.text())
+          .then(result => {
+            document.getElementById("uploadStatus").style.color = "green";
+            document.getElementById("uploadStatus").innerText = "✅ Tải lên thành công!";
+            setTimeout(() => { document.getElementById("uploadStatus").innerText = ""; }, 3000);
+
+            loadEffectButtons(); // ⚠️ tải lại nút hiệu ứng
+          })
+          .catch(error => {
+            document.getElementById("uploadStatus").style.color = "red";
+            document.getElementById("uploadStatus").innerText = "❌ Tải lên thất bại!";
+          });
+      }
+
+
+      function loadEffectButtons() {
+        fetch('/effect_list')
+          .then(res => res.json())
+          .then(effects => {
+            const container = document.getElementById("effectButtons");
+            container.innerHTML = ""; // Xóa nút cũ nếu có
+
+            effects.forEach(effect => {
+              const btn = document.createElement("button");
+              btn.innerText = `✨ ${effect}`;
+              btn.onclick = () => sendCommand(effect);
+              container.appendChild(btn);
+            });
+          })
+          .catch(err => {
+            console.error("Lỗi tải hiệu ứng:", err);
+            appendToConsole("[ERR] Không tải được danh sách hiệu ứng");
+          });
+      }
+
+      window.addEventListener("load", loadEffectButtons);
+
+    </script>
 </body>
 
 </html>
