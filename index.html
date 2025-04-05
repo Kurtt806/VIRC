@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <title>VIRC-Controler Lightning RC</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <!-- Cho phép hiển thị toàn màn hình như app -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="VIRC LED">
+  <meta name="theme-color" content="#1e1e1e">
+  <!-- Liên kết đến file manifest -->
+  <link rel="manifest" href="/manifest.json">
+
+  <!-- Biểu tượng app (icon cho màn hình chính) -->
+  <link rel="apple-touch-icon" href="/icon.png">
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #1e1e1e;
+      color: #e0e0e0;
+      padding: 10px;
+      margin: 0;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: auto;
+      background: #2b2b2b;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 0 8px rgba(255, 215, 0, 0.2);
+    }
+
+    h2 {
+      text-align: center;
+      color: #ffd700;
+      font-size: 1.8rem;
+      margin-bottom: 15px;
+    }
+
+    p {
+      margin: 5px 0;
+      font-size: 1rem;
+    }
+
+    button {
+      background-color: #2c2c2c;
+      color: #e0e0e0;
+      border: 1px solid #ffd700;
+      margin: 5px;
+      padding: 10px 15px;
+      font-size: 1rem;
+      cursor: pointer;
+      border-radius: 6px;
+      width: 100%;
+      transition: background 0.2s, color 0.2s;
+    }
+
+    button:hover {
+      background-color: #ffd700;
+      color: #000;
+    }
+
+    input[type=number],
+    input[type=file] {
+      background: #1a1a1a;
+      color: #fff;
+      border: 1px solid #444;
+      padding: 8px;
+      font-size: 1rem;
+      border-radius: 5px;
+      width: 100%;
+      margin-top: 8px;
+    }
+
+    #uploadBox {
+      border: 2px dashed #ffd700;
+      background: #2c2c2c;
+      padding: 15px;
+      text-align: center;
+      cursor: pointer;
+      margin-top: 15px;
+      border-radius: 8px;
+    }
+
+    #uploadBox.dragover {
+      border-color: #fff176;
+      background: #3a3a3a;
+    }
+
+    #uploadStatus {
+      margin-top: 10px;
+      font-weight: bold;
+      text-align: center;
+      color: #ffd700;
+    }
+
+    canvas {
+      width: 100% !important;
+      height: auto !important;
+      max-height: 200px;
+      background: #1a1a1a;
+      border: 1px solid #444;
+      border-radius: 8px;
+      margin-top: 10px;
+    }
+
+    .logo-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 0;
+      overflow: hidden;
+      pointer-events: none;
+    }
+
+    .logo-overlay img {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      max-width: 90%;
+      opacity: 0.05;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      h2 {
+        font-size: 1.5rem;
+      }
+
+      button {
+        font-size: 1rem;
+      }
+
+      .container {
+        padding: 15px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      h2 {
+        font-size: 1.3rem;
+      }
+
+      p,
+      button {
+        font-size: 0.95rem;
+      }
+
+      canvas {
+        max-height: 150px;
+      }
+    }
+  </style>
+
+
+</head>
+
+<body>
+  <div class="container">
+    <h2>VIRC- Controler Lightning RC</h2>
+
+    <!-- Các nút hiệu ứng -->
+    <div id="effectButtons"></div>
+
+    <!-- Đặt độ sáng -->
+    <input type="number" id="brightnessInput" placeholder="0-255">
+    <button onclick="setBrightness()" class="btn secondary">✨ Set Brightness</button>
+
+    <!-- Khu vực upload -->
+    <div id="uploadBox">📂 Kéo thả file config.cfg vào đây hoặc nhấn để chọn</div>
+    <input type="file" id="configFile" name="configFile" style="display:none;">
+    <div id="uploadStatus"></div>
+
+    <p><b>Hệ thống:</b></p>
+    
+
+<div id="sysinfo" style="margin-top:15px; padding:15px; background:#1f1f1f; border:1px solid #444; border-radius:10px;">
+  <h3 style="color:#ffd700; margin-bottom:10px;">📟 Thông tin hệ thống</h3>
+  <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+    </div>
+</div>
+
+  </div>
+
+    <canvas id="cpuChart" width="600" height="150"></canvas>
+    <p><b>Console Serial:</b></p>
+    <pre id="consoleBox"
+      style="background:#111; color:#0f0; padding:10px; height:150px; overflow:auto; border-radius:6px;"></pre>
+
+  </div>
+
+  <div class="logo-overlay" id="logoLayer">
+    <img src="logo_vi3d.jpeg" alt="VI3D Logo">
+  </div>
+
+  <script>
+    const ws = new WebSocket(`ws://${location.host}/ws`);
+    const cpuHistory = [];
+    const maxDataPoints = 10;
+
+    const canvas = document.getElementById("cpuChart");
+    const ctx = canvas.getContext("2d");
+
+    function drawCPUGraph(data) {
+      const w = canvas.width;
+      const h = canvas.height;
+
+      ctx.clearRect(0, 0, w, h);
+
+      ctx.strokeStyle = "#666";
+      ctx.beginPath();
+      ctx.moveTo(0, h);
+      ctx.lineTo(w, h);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.strokeStyle = "#008CBA";
+      ctx.lineWidth = 2;
+      data.forEach((val, i) => {
+        const x = (i / (maxDataPoints - 1)) * w;
+        const y = h - (val / 100) * h;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      });
+      ctx.stroke();
+
+      ctx.fillStyle = "#00bcd4";
+      data.forEach((val, i) => {
+        const x = (i / (maxDataPoints - 1)) * w;
+        const y = h - (val / 100) * h;
+        ctx.beginPath();
+        ctx.arc(x, y, 3, 0, 2 * Math.PI);
+        ctx.fill();
+      });
+    }
+
+    
+ws.onmessage = e => {
+  if (e.data.startsWith("[LOG]")) {
+    appendToConsole(e.data.replace("[LOG]", ""));
+    return;
+  }
+
+  if (e.data.startsWith("[SYSINFO]")) {
+    const sysData = JSON.parse(e.data.replace("[SYSINFO]", ""));
+    document.getElementById("chip_id").innerText = sysData.chip_id || "N/A";
+    document.getElementById("mac_addr").innerText = sysData.mac || "N/A";
+    document.getElementById("flash_size").innerText = sysData.flash_size + " KB";
+    document.getElementById("heap_free").innerText = sysData.heap_free + " B";
+    document.getElementById("cpu_freq").innerText = sysData.cpu_freq + " MHz";
+    document.getElementById("uptime").innerText = sysData.uptime;
+    return;
+  }
+
+  if (e.data.startsWith("[EFFECT_LIST]")) {
+    const effects = e.data.replace("[EFFECT_LIST]", "").split(",");
+    const btnContainer = document.getElementById("effectButtons");
+    btnContainer.innerHTML = "";
+    effects.forEach(effect => {
+      const btn = document.createElement("button");
+      btn.innerText = `✨ ${effect}`;
+      btn.onclick = () => sendCommand(effect);
+      btnContainer.appendChild(btn);
+    });
+    return;
+  }
+};
+function sendCommand(cmd) {
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.send(cmd);
+        appendToConsole(`[CMD] ${cmd}`);
+      } else {
+        appendToConsole(`[ERR] WebSocket chưa sẵn sàng`);
+      }
+    }
+
+    function appendToConsole(line) {
+      const logBox = document.getElementById("consoleBox");
+      logBox.textContent += line + "\n";
+      logBox.scrollTop = logBox.scrollHeight;
+    }
+
+    function setBrightness() {
+      const b = document.getElementById("brightnessInput").value;
+      sendCommand("SET_BRIGHTNESS:" + b);
+    }
+
+    const uploadBox = document.getElementById("uploadBox");
+    const fileInput = document.getElementById("configFile");
+
+    uploadBox.addEventListener("click", () => fileInput.click());
+    uploadBox.addEventListener("dragover", e => {
+      e.preventDefault();
+      uploadBox.classList.add("dragover");
+    });
+    uploadBox.addEventListener("dragleave", () => {
+      uploadBox.classList.remove("dragover");
+    });
+    uploadBox.addEventListener("drop", e => {
+      e.preventDefault();
+      uploadBox.classList.remove("dragover");
+      if (e.dataTransfer.files.length) {
+        uploadFile(e.dataTransfer.files[0]);
+      }
+    });
+
+    fileInput.addEventListener("change", () => {
+      if (fileInput.files.length) {
+        uploadFile(fileInput.files[0]);
+      }
+    });
+
+    function uploadFile(file) {
+      const formData = new FormData();
+      formData.append("configFile", file);
+      fetch("/upload", { method: "POST", body: formData })
+        .then(r => r.text())
+        .then(result => {
+          document.getElementById("uploadStatus").style.color = "green";
+          document.getElementById("uploadStatus").innerText = "✅ Tải lên thành công!";
+          setTimeout(() => { document.getElementById("uploadStatus").innerText = ""; }, 3000);
+
+          loadEffectButtons(); // ⚠️ tải lại nút hiệu ứng
+        })
+        .catch(error => {
+          document.getElementById("uploadStatus").style.color = "red";
+          document.getElementById("uploadStatus").innerText = "❌ Tải lên thất bại!";
+        });
+    }
+
+
+    function loadEffectButtons() {
+      fetch('/effect_list')
+        .then(res => res.json())
+        .then(effects => {
+          const container = document.getElementById("effectButtons");
+          container.innerHTML = ""; // Xóa nút cũ nếu có
+
+          effects.forEach(effect => {
+            const btn = document.createElement("button");
+            btn.innerText = `✨ ${effect}`;
+            btn.onclick = () => sendCommand(effect);
+            container.appendChild(btn);
+          });
+        })
+        .catch(err => {
+          console.error("Lỗi tải hiệu ứng:", err);
+          appendToConsole("[ERR] Không tải được danh sách hiệu ứng");
+        });
+    }
+
+    window.addEventListener("load", loadEffectButtons);
+
+  </script>
+</body>
+
+</html>
