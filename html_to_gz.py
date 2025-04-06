@@ -4,6 +4,8 @@ from pathlib import Path
 
 # Đường dẫn đến file HTML nguồn và thư mục đích
 source_file = Path("index.html")
+#source_file = Path("index_relayout.html")
+
 output_dir = Path("data")
 output_file = output_dir / "index.html.gz"
 
