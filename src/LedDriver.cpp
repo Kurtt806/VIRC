@@ -118,3 +118,7 @@ void LedDriver::show()
 {
   _strip->show();
 }
+void LedDriver::clearEffects()
+{
+  _effects.clear();
+}

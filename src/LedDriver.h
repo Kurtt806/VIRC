@@ -35,6 +35,7 @@ public:
 
     void setPixelColor(uint16_t index, uint8_t r, uint8_t g, uint8_t b);
     void show();
+    void clearEffects();
 
     void loop();
 

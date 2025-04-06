@@ -17,7 +17,8 @@ LedDriver *led = nullptr; // Con trỏ đến LED driver
 
 void blinkBluePixel(int pixel = 0, int times = 2, int delayMs = 25)
 {
-  if (!led) return;
+  if (!led)
+    return;
 
   for (int i = 0; i < times; ++i)
   {
@@ -40,6 +41,7 @@ void initSystem()
   Serial.begin(115200);
   SPIFFS.begin();
   pinMode(8, OUTPUT);
+  digitalWrite(8, HIGH);
 }
 
 void loadLedConfig()
@@ -142,20 +144,24 @@ void initWebSocket()
     if (type == WS_EVT_DATA) {
       String msg = String((char*)data).substring(0, len);
       msg.trim();
-      blinkBluePixel();
-
-      // Xử lý lệnh điều khiển LED theo yêu cầu của client
+      sendLogToClients("[HOST] " + msg);
+      
       if (msg == "LED_ON") {
         if (led) led->setWifiTrigger(true);
         client->text("✅ LED ON");
         sendLogToClients("✅ LED trigger ON");
-
       }
       else if (msg == "LED_OFF") {
         if (led) led->setWifiTrigger(false);
         client->text("✅ LED OFF");
         sendLogToClients("✅ LED trigger OFF");
       }
+      
+      else if (msg == "REFRESH_EFFECT_LIST") {
+        sendLogToClients("📤 Đã gửi lại danh sách hiệu ứng sau khi upload virc.cfg");
+        sendListToClients();
+      }
+      
     } });
   server.addHandler(&ws);
 }
@@ -167,6 +173,7 @@ void initFileServer()
 
   server.on("/effect_list", HTTP_GET, [](AsyncWebServerRequest *request)
             {
+              sendLogToClients("Send effect_list");
   String json = "[";
   for (const auto &sec : vircCfg)
   {
@@ -201,16 +208,11 @@ void initFileServer()
   server.onNotFound([](AsyncWebServerRequest *request)
                     { request->send(404, "text/plain", "Not Found"); });
 
-  server.on(
-      "/upload", HTTP_POST,
-      [](AsyncWebServerRequest *request)
-      {
+  server.on("/upload", HTTP_POST, [](AsyncWebServerRequest *request)
+            {
         request->send(200, "text/plain", "OK");
-        sendLogToClients("Upload hoàn tất");
-      },
-      [](AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data,
-         size_t len, bool final)
-      {
+        sendLogToClients("Upload hoàn tất"); }, [](AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final)
+            {
         static File f;
         static String targetPath;
 
@@ -231,8 +233,7 @@ void initFileServer()
           {
             targetPath = "";
           }
-
-          Serial.println("[UPLOAD] Bắt đầu: " + filename + " => " + targetPath);
+          sendLogToClients("[UPLOAD] Bắt đầu: " + filename + " => " + targetPath);
           if (targetPath != "")
           {
             if (SPIFFS.exists(targetPath))
@@ -253,20 +254,20 @@ void initFileServer()
 
           if (targetPath == "/virc.cfg")
           {
-            loadLedConfig();
-            sendListToClients();
+            sendLogToClients("✅ virc.cfg nhận cấu hình");
+            delay(50);
+            loadLedConfig();            // Đọc lại file vừa lưu
+            sendListToClients();        // Gửi hiệu ứng về web
+            sendLogToClients("✅ virc.cfg đã lưu và nạp lại");
           }
+
           else if (targetPath == "/wifi.cfg")
           {
             parseCfgFile("/wifi.cfg", wifiCfg);
             sendLogToClients("✅ Đã tải lại wifi.cfg");
           }
-        }
-      });
+        } });
 }
-
-
-
 
 void setup()
 {
@@ -283,7 +284,6 @@ void setup()
   sendLogToClients("Nội dung debug");
 }
 
-
 void loop()
 {
   static unsigned long lastSent = 0;
@@ -291,11 +291,9 @@ void loop()
     led->loop();
 
   unsigned long now = millis();
-  if (now - lastSent >= 1000) {
+  if (now - lastSent >= 1000)
+  {
     lastSent = now;
-
-    sendLogToClients(".");
-
     // Tạo JSON gửi về Web qua WebSocket
     String json = "{";
     json += "\"chip_id\":\"" + String((uint32_t)ESP.getEfuseMac(), HEX) + "\",";
@@ -309,4 +307,3 @@ void loop()
     ws.textAll("[SYSINFO]" + json);
   }
 }
-
