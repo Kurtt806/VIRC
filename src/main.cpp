@@ -15,6 +15,21 @@ SectionMap wifiCfg;
 
 LedDriver *led = nullptr; // Con trỏ đến LED driver
 
+void blinkBluePixel(int pixel = 0, int times = 3, int delayMs = 50)
+{
+  if (!led) return;
+
+  for (int i = 0; i < times; ++i)
+  {
+    led->setPixelColor(pixel, 0, 0, 255); // màu xanh dương
+    led->show();
+    delay(delayMs);
+    led->setPixelColor(pixel, 0, 0, 0); // tắt
+    led->show();
+    delay(delayMs);
+  }
+}
+
 void sendLogToClients(const String &msg)
 {
   ws.textAll("[LOG]" + msg);
@@ -127,7 +142,7 @@ void initWebSocket()
     if (type == WS_EVT_DATA) {
       String msg = String((char*)data).substring(0, len);
       msg.trim();
-      Serial.println("[WS] Nhận: " + msg);
+      blinkBluePixel();
 
       // Xử lý lệnh điều khiển LED theo yêu cầu của client
       if (msg == "LED_ON") {
@@ -249,6 +264,9 @@ void initFileServer()
         }
       });
 }
+
+
+
 
 void setup()
 {

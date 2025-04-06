@@ -106,3 +106,15 @@ void LedDriver::renderXLR(const EffectConfig &cfg)
     pos++;
     delay(cfg.speed);
 }
+
+
+void LedDriver::setPixelColor(uint16_t index, uint8_t r, uint8_t g, uint8_t b)
+{
+  if (index < _count)
+    _strip->setPixelColor(index, scaleColor(r, g, b));
+}
+
+void LedDriver::show()
+{
+  _strip->show();
+}
