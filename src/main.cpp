@@ -15,7 +15,7 @@ SectionMap wifiCfg;
 
 LedDriver *led = nullptr; // Con trỏ đến LED driver
 
-void blinkBluePixel(int pixel = 0, int times = 3, int delayMs = 50)
+void blinkBluePixel(int pixel = 0, int times = 2, int delayMs = 25)
 {
   if (!led) return;
 
