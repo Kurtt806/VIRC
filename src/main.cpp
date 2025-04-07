@@ -15,22 +15,6 @@ SectionMap wifiCfg;
 
 LedDriver *led = nullptr; // Con trỏ đến LED driver
 
-void blinkBluePixel(int pixel = 0, int times = 2, int delayMs = 25)
-{
-  if (!led)
-    return;
-
-  for (int i = 0; i < times; ++i)
-  {
-    led->setPixelColor(pixel, 0, 0, 255); // màu xanh dương
-    led->show();
-    delay(delayMs);
-    led->setPixelColor(pixel, 0, 0, 0); // tắt
-    led->show();
-    delay(delayMs);
-  }
-}
-
 void sendLogToClients(const String &msg)
 {
   ws.textAll("[LOG]" + msg);
@@ -46,12 +30,29 @@ void initSystem()
 
 void loadLedConfig()
 {
-  parseCfgFile("/virc.cfg", vircCfg);
+  if (!parseCfgFile("/virc.cfg", vircCfg))
+  {
+    Serial.println("[ERROR] Không đọc được virc.cfg");
+    sendLogToClients("❌ Không đọc được virc.cfg");
+    return;
+  }
+
+  // Kiểm tra khóa bắt buộc trong [general]
+  if (!vircCfg.count("general") || !vircCfg["general"].count("pin") || !vircCfg["general"].count("led_count"))
+  {
+    Serial.println("[ERROR] Thiếu khóa [general]/pin hoặc led_count");
+    return;
+  }
 
   int pin = vircCfg["general"]["pin"].toInt();
   int count = vircCfg["general"]["led_count"].toInt();
   int brightness = vircCfg["general"].count("brightness") ? vircCfg["general"]["brightness"].toInt() : 255;
 
+  if (led)
+  {
+    delete led;
+    led = nullptr;
+  }
   led = new LedDriver(pin, count);
   led->setBrightness(brightness);
 
@@ -59,25 +60,33 @@ void loadLedConfig()
   {
     if (!sec.first.startsWith("strip"))
       continue;
+
     const auto &map = sec.second;
+    if (!map.count("effect") || !map.count("ledstart") || !map.count("ledend"))
+    {
+      Serial.println("[WARN] Bỏ qua " + sec.first + " do thiếu effect/ledstart/ledend");
+      continue;
+    }
+
     EffectConfig cfg;
     cfg.name = map.at("effect");
     cfg.region.start = map.at("ledstart").toInt();
     cfg.region.end = map.at("ledend").toInt();
     cfg.speed = map.count("speed") ? map.at("speed").toInt() : 20;
 
-    String input = map.count("input") ? map.at("input") : "";
-    if (input.startsWith("gpio"))
+    if (map.count("input"))
     {
-      cfg.inputPin = digitalPinToPinNumber(input);
-    }
-    else if (input == "wifi")
-    {
-      cfg.inputWifi = true;
+      String input = map.at("input");
+      if (input.startsWith("gpio"))
+        cfg.inputPin = digitalPinToPinNumber(input);
+      else if (input == "wifi")
+        cfg.inputWifi = true;
     }
 
+    // Xử lý color
+    String colorStr = map.count("color") ? map.at("color") : "255,255,255";
     int r = 255, g = 255, b = 255;
-    sscanf(map.at("color").c_str(), "%d,%d,%d", &r, &g, &b);
+    sscanf(colorStr.c_str(), "%d,%d,%d", &r, &g, &b);
     cfg.r = r;
     cfg.g = g;
     cfg.b = b;
@@ -90,16 +99,29 @@ void loadLedConfig()
 
 void initLedDriver()
 {
+  if (!vircCfg.count("general") || !vircCfg["general"].count("led_count") || !vircCfg["general"].count("pin"))
+  {
+    Serial.println("[ERROR] Thiếu cấu hình [general]");
+    return;
+  }
+
   int ledCount = vircCfg["general"]["led_count"].toInt();
   int pin = vircCfg["general"]["pin"].toInt();
-  String effect = vircCfg["general"]["effect"];
-  String colorStr = vircCfg["colors"]["color1"];
-  int brightness = vircCfg["general"]["brightness"].toInt();
+  String effect = vircCfg["general"].count("effect") ? vircCfg["general"]["effect"] : "basic";
+  String colorStr = vircCfg.count("colors") && vircCfg["colors"].count("color1") ? vircCfg["colors"]["color1"] : "255,255,255";
+  int brightness = vircCfg["general"].count("brightness") ? vircCfg["general"]["brightness"].toInt() : 255;
+
   int r = 0, g = 0, b = 0;
   sscanf(colorStr.c_str(), "%d,%d,%d", &r, &g, &b);
 
+  if (led)
+  {
+    delete led;
+    led = nullptr;
+  }
+
   led = new LedDriver(pin, ledCount);
-  led->setBrightness(brightness > 0 ? brightness : 255); // fallback nếu chưa có
+  led->setBrightness(brightness);
   led->begin();
 }
 
@@ -145,16 +167,22 @@ void initWebSocket()
       String msg = String((char*)data).substring(0, len);
       msg.trim();
       sendLogToClients("[HOST] " + msg);
-      
+      led->addOverlayBlink(0, 0, 0, 255, 1, 20); // chớp xanh pixel 0 ba lần
+
       if (msg == "LED_ON") {
-        if (led) led->setWifiTrigger(true);
-        client->text("✅ LED ON");
-        sendLogToClients("✅ LED trigger ON");
+        if (led) {
+          led->setWifiTrigger(true);
+        }
       }
       else if (msg == "LED_OFF") {
         if (led) led->setWifiTrigger(false);
         client->text("✅ LED OFF");
         sendLogToClients("✅ LED trigger OFF");
+      }
+      else if (msg == "EFFECT_FLASH") {
+        if (led) led->setWifiTrigger(false);
+        client->text("✅ EFFECT FLASH");
+        sendLogToClients("✅ EFFECT_FLASH");
       }
       
       else if (msg == "REFRESH_EFFECT_LIST") {
@@ -210,63 +238,41 @@ void initFileServer()
 
   server.on("/upload", HTTP_POST, [](AsyncWebServerRequest *request)
             {
-        request->send(200, "text/plain", "OK");
-        sendLogToClients("Upload hoàn tất"); }, [](AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final)
+                        request->send(200, "text/plain", "OK");
+                        sendLogToClients("✅ Upload hoàn tất"); }, [](AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final)
             {
-        static File f;
-        static String targetPath;
-
-        if (index == 0)
-        {
-          // Xác định tên file sẽ lưu (chỉ hỗ trợ virc.cfg hoặc wifi.cfg)
-          String clientFile = request->getParam("configFile", true)->value();
-          clientFile.toLowerCase();
-          if (clientFile.endsWith("virc.cfg"))
-          {
-            targetPath = "/virc.cfg";
-          }
-          else if (clientFile.endsWith("wifi.cfg"))
-          {
-            targetPath = "/wifi.cfg";
-          }
-          else
-          {
-            targetPath = "";
-          }
-          sendLogToClients("[UPLOAD] Bắt đầu: " + filename + " => " + targetPath);
-          if (targetPath != "")
-          {
-            if (SPIFFS.exists(targetPath))
-              SPIFFS.remove(targetPath);
-            f = SPIFFS.open(targetPath, FILE_WRITE);
-          }
-        }
-
-        if (f && targetPath != "")
-        {
-          f.write(data, len);
-        }
-
-        if (final && targetPath != "")
-        {
-          f.close();
-          Serial.println("[UPLOAD] Xong: " + targetPath);
-
-          if (targetPath == "/virc.cfg")
-          {
-            sendLogToClients("✅ virc.cfg nhận cấu hình");
-            delay(50);
-            loadLedConfig();            // Đọc lại file vừa lưu
-            sendListToClients();        // Gửi hiệu ứng về web
-            sendLogToClients("✅ virc.cfg đã lưu và nạp lại");
-          }
-
-          else if (targetPath == "/wifi.cfg")
-          {
-            parseCfgFile("/wifi.cfg", wifiCfg);
-            sendLogToClients("✅ Đã tải lại wifi.cfg");
-          }
-        } });
+                        static File f;
+                    
+                        if (index == 0) {
+                          sendLogToClients("📥 Bắt đầu nhận file: " + filename);
+                          
+                          if (SPIFFS.exists("/" + filename)) SPIFFS.remove("/" + filename);
+                          f = SPIFFS.open("/" + filename, FILE_WRITE);
+                        }
+                    
+                        if (f) {
+                          f.write(data, len);
+                        }
+                    
+                        if (final) {
+                          f.close();
+                          sendLogToClients("✅ Đã lưu file thành công: " + filename);
+                    
+                          // Tùy theo tên file, nạp lại cấu hình nếu cần
+                          if (filename == "virc.cfg") {
+                            sendLogToClients("⏳ Nạp lại virc.cfg...");
+                            delay(50);
+                            // loadLedConfig();
+                            if (led) sendListToClients();
+                            sendLogToClients("✅ virc.cfg đã nạp");
+                          }
+                    
+                          else if (filename == "wifi.cfg") {
+                            sendLogToClients("⏳ Nạp lại wifi.cfg...");
+                            parseCfgFile("/wifi.cfg", wifiCfg);
+                            sendLogToClients("✅ wifi.cfg đã nạp");
+                          }
+                        } });
 }
 
 void setup()

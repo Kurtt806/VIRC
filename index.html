@@ -306,15 +306,20 @@
     });
 
     function uploadFile(file) {
+      if (!file.name.endsWith(".cfg")) {
+        document.getElementById("uploadStatus").style.color = "red";
+        document.getElementById("uploadStatus").innerText = "⚠️ Chỉ chấp nhận file .cfg!";
+        return;
+      }
+
       const formData = new FormData();
       formData.append("configFile", file);
+
       fetch("/upload", { method: "POST", body: formData })
         .then(r => r.text())
         .then(result => {
           document.getElementById("uploadStatus").style.color = "green";
           document.getElementById("uploadStatus").innerText = "✅ Tải lên thành công!";
-          // setTimeout(() => { document.getElementById("uploadStatus").innerText = ""; }, 3000);
-
           if (ws.readyState === WebSocket.OPEN) {
             ws.send("REFRESH_EFFECT_LIST");
           }
@@ -324,6 +329,7 @@
           document.getElementById("uploadStatus").innerText = "❌ Tải lên thất bại!";
         });
     }
+
 
     function loadEffectButtons() {
       fetch('/effect_list')
