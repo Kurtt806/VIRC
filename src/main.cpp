@@ -164,35 +164,43 @@ void initWebSocket()
                 AwsEventType type, void *arg, uint8_t *data, size_t len)
              {
     if (type == WS_EVT_DATA) {
-      String msg = String((char*)data).substring(0, len);
+      String msg = String((char *)data).substring(0, len);
       msg.trim();
+
       sendLogToClients("[HOST] " + msg);
       led->addOverlayBlink(0, 0, 0, 255, 1, 20); // chớp xanh pixel 0 ba lần
 
-      if (msg == "LED_ON") {
-        if (led) {
-          led->setWifiTrigger(true);
-        }
-      }
-      else if (msg == "LED_OFF") {
-        if (led) led->setWifiTrigger(false);
-        client->text("✅ LED OFF");
-        sendLogToClients("✅ LED trigger OFF");
-      }
-      else if (msg == "EFFECT_FLASH") {
-        if (led) led->setWifiTrigger(false);
-        client->text("✅ EFFECT FLASH");
-        sendLogToClients("✅ EFFECT_FLASH");
-      }
-      
-      else if (msg == "REFRESH_EFFECT_LIST") {
+      if (msg == "REFRESH_EFFECT_LIST") {
         sendLogToClients("📤 Đã gửi lại danh sách hiệu ứng sau khi upload virc.cfg");
         sendListToClients();
       }
-      
-    } });
+      else if (msg == "RESET_ESP") {
+        sendLogToClients("🌀 ESP32 sẽ reset sau 1 giây...");
+        client->text("🌀 Resetting...");
+        delay(1000);
+        ESP.restart();
+      }      
+      else if (msg.startsWith("SET:")) {
+        String effectName = msg.substring(4);
+        sendLogToClients("🎛️ Yêu cầu chạy hiệu ứng: " + effectName);
+
+        if (led) {
+          bool ok = led->applyEffectByName(effectName); // hàm này bạn cần hiện thực
+          if (ok) {
+            client->text("✅ Đang chạy hiệu ứng: " + effectName);
+            sendLogToClients("✅ Đang chạy hiệu ứng: " + effectName);
+          } else {
+            client->text("❌ Không tìm thấy hiệu ứng: " + effectName);
+            sendLogToClients("❌ Không tìm thấy hiệu ứng: " + effectName);
+          }
+        }
+      }
+    }
+  });
+
   server.addHandler(&ws);
 }
+
 
 void initFileServer()
 {
@@ -262,7 +270,7 @@ void initFileServer()
                           if (filename == "virc.cfg") {
                             sendLogToClients("⏳ Nạp lại virc.cfg...");
                             delay(50);
-                            // loadLedConfig();
+                            loadLedConfig();
                             if (led) sendListToClients();
                             sendLogToClients("✅ virc.cfg đã nạp");
                           }
@@ -295,7 +303,7 @@ void loop()
   static unsigned long lastSent = 0;
   if (led)
     led->loop();
-
+  
   unsigned long now = millis();
   if (now - lastSent >= 1000)
   {

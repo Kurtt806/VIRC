@@ -199,6 +199,11 @@
         <p>Uptime: <span id="uptime">---</span></p>
       </div>
     </div>
+    <div style="grid-column: span 2; display: flex; gap: 10px;">
+      <button onclick="reconnectWebSocket()">🔁 Kết nối lại WebSocket</button>
+      <button onclick="resetESP()">🔄 Reset ESP</button>
+    </div>
+
 
     <p><b>Console Serial:</b></p>
     <pre id="consoleBox"
@@ -349,6 +354,25 @@
           appendToConsole("[ERR] Không tải được danh sách hiệu ứng");
         });
     }
+
+    function reconnectWebSocket() {
+      appendToConsole("🔁 Đang kết nối lại WebSocket...");
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.close();
+      }
+      setTimeout(() => window.location.reload(), 500);
+    }
+
+    function resetESP() {
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.send("RESET_ESP");
+        appendToConsole("🌀 Gửi yêu cầu reset ESP...");
+      } else {
+        appendToConsole("❌ WebSocket chưa sẵn sàng để reset");
+      }
+    }
+
+
 
     window.addEventListener("load", loadEffectButtons);
   </script>

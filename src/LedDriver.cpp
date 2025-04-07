@@ -29,10 +29,6 @@ void LedDriver::addEffect(const EffectConfig &cfg) {
     _effects.push_back(cfg);
 }
 
-void LedDriver::setWifiTrigger(bool state) {
-    _wifiTriggered = state;
-}
-
 uint32_t LedDriver::scaleColor(uint8_t r, uint8_t g, uint8_t b) {
     return _strip->Color((r * _brightness) / 255,
                          (g * _brightness) / 255,
@@ -133,3 +129,17 @@ void LedDriver::renderOverlay() {
                                    [](const OverlayEffect &fx) { return !fx.active; }),
                     _overlays.end());
 }
+
+
+bool LedDriver::applyEffectByName(const String &name) {
+    for (const auto &cfg : _effects) {
+        if (cfg.name.equalsIgnoreCase(name)) {
+            clearEffects();    // Xóa hết hiệu ứng cũ
+            addEffect(cfg);    // Thêm lại hiệu ứng được chọn
+            return true;
+        }
+    }
+    return false;
+}
+
+  

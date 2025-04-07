@@ -33,6 +33,7 @@ struct OverlayEffect {
     bool active;
 };
 
+
 class LedDriver {
 public:
     LedDriver(uint8_t pin, uint16_t count);
@@ -40,8 +41,7 @@ public:
     void begin();
     void setBrightness(uint8_t brightness);
     void addEffect(const EffectConfig &cfg);
-    void setWifiTrigger(bool state);
-
+    bool applyEffectByName(const String &name);
     void setPixelColor(uint16_t index, uint8_t r, uint8_t g, uint8_t b);
     void show();
     void clearEffects();
