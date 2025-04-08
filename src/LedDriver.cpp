@@ -1,16 +1,19 @@
 #include "LedDriver.h"
 
 LedDriver::LedDriver(uint8_t pin, uint16_t count)
-    : _pin(pin), _count(count), _brightness(255) {
+    : _pin(pin), _count(count), _brightness(255)
+{
     _strip = new Adafruit_NeoPixel(_count, _pin, NEO_GRB + NEO_KHZ800);
 }
 
-void LedDriver::begin() {
+void LedDriver::begin()
+{
     _strip->begin();
     _strip->clear();
     _strip->show();
 
-    for (uint8_t i = 0; i < 3 && i < _count; i++) {
+    for (uint8_t i = 0; i < 3 && i < _count; i++)
+    {
         _strip->setPixelColor(i, _strip->Color(i == 0 ? 255 : 0, i == 1 ? 255 : 0, i == 2 ? 255 : 0));
         _strip->show();
         delay(300);
@@ -19,32 +22,60 @@ void LedDriver::begin() {
     _strip->show();
 }
 
-void LedDriver::setBrightness(uint8_t brightness) {
+void LedDriver::setBrightness(uint8_t brightness)
+{
     _brightness = brightness;
 }
 
-void LedDriver::addEffect(const EffectConfig &cfg) {
+void LedDriver::addEffect(const EffectConfig &cfg)
+{
     if (cfg.inputPin >= 0)
         pinMode(cfg.inputPin, INPUT);
     _effects.push_back(cfg);
 }
 
-uint32_t LedDriver::scaleColor(uint8_t r, uint8_t g, uint8_t b) {
+uint32_t LedDriver::scaleColor(uint8_t r, uint8_t g, uint8_t b)
+{
     return _strip->Color((r * _brightness) / 255,
                          (g * _brightness) / 255,
                          (b * _brightness) / 255);
 }
 
-void LedDriver::loop() {
+void LedDriver::loop()
+{
     _strip->clear();
 
-    for (auto &cfg : _effects) {
-        if (cfg.inputPin >= 0 && digitalRead(cfg.inputPin) == LOW) continue;
-        if (cfg.inputWifi && !_wifiTriggered) continue;
+    for (auto &cfg : _effects)
+    {
+        if (cfg.inputPin >= 0 && digitalRead(cfg.inputPin) == LOW)
+            continue;
+        if (cfg.inputWifi && !_wifiTriggered)
+            continue;
 
-        if (cfg.name == "basic") renderBasic(cfg);
-        else if (cfg.name == "xinhanRL") renderXRL(cfg);
-        else if (cfg.name == "xinhanLR") renderXLR(cfg);
+        if (cfg.name == "basic")
+            renderBasic(cfg);
+        else if (cfg.name == "xinhanRL")
+            renderXRL(cfg);
+        else if (cfg.name == "xinhanLR")
+            renderXLR(cfg);
+        if (cfg.name == "basic")
+            renderBasic(cfg);
+        else if (cfg.name == "xinhanRL")
+            renderXRL(cfg);
+        else if (cfg.name == "xinhanLR")
+            renderXLR(cfg);
+        else if (cfg.name == "flash")
+            renderFlash(cfg);
+        else if (cfg.name == "breathing")
+            renderBreathing(cfg);
+        else if (cfg.name == "random")
+            renderRandom(cfg);
+        else if (cfg.name == "twinkle")
+            renderTwinkle(cfg);
+        else if (cfg.name == "gradian")
+            renderGradient(cfg);
+        else if (cfg.name == "bolide")
+            renderBolide(cfg);
     }
 
     renderOverlay();
@@ -52,14 +83,17 @@ void LedDriver::loop() {
     delay(20);
 }
 
-void LedDriver::renderBasic(const EffectConfig &cfg) {
+void LedDriver::renderBasic(const EffectConfig &cfg)
+{
     for (uint16_t i = cfg.region.start; i <= cfg.region.end && i < _count; i++)
         _strip->setPixelColor(i, scaleColor(cfg.r, cfg.g, cfg.b));
 }
 
-void LedDriver::renderXRL(const EffectConfig &cfg) {
+void LedDriver::renderXRL(const EffectConfig &cfg)
+{
     static uint16_t pos = 0;
-    for (uint16_t i = cfg.region.start; i <= cfg.region.end; i++) {
+    for (uint16_t i = cfg.region.start; i <= cfg.region.end; i++)
+    {
         uint16_t len = cfg.region.end - cfg.region.start + 1;
         if (i == (cfg.region.end - pos % len))
             _strip->setPixelColor(i, scaleColor(cfg.r, cfg.g, cfg.b));
@@ -68,9 +102,11 @@ void LedDriver::renderXRL(const EffectConfig &cfg) {
     delay(cfg.speed);
 }
 
-void LedDriver::renderXLR(const EffectConfig &cfg) {
+void LedDriver::renderXLR(const EffectConfig &cfg)
+{
     static uint16_t pos = 0;
-    for (uint16_t i = cfg.region.start; i <= cfg.region.end; i++) {
+    for (uint16_t i = cfg.region.start; i <= cfg.region.end; i++)
+    {
         uint16_t len = cfg.region.end - cfg.region.start + 1;
         if (i == (cfg.region.start + pos % len))
             _strip->setPixelColor(i, scaleColor(cfg.r, cfg.g, cfg.b));
@@ -79,21 +115,25 @@ void LedDriver::renderXLR(const EffectConfig &cfg) {
     delay(cfg.speed);
 }
 
-void LedDriver::setPixelColor(uint16_t index, uint8_t r, uint8_t g, uint8_t b) {
+void LedDriver::setPixelColor(uint16_t index, uint8_t r, uint8_t g, uint8_t b)
+{
     if (index < _count)
         _strip->setPixelColor(index, scaleColor(r, g, b));
 }
 
-void LedDriver::show() {
+void LedDriver::show()
+{
     _strip->show();
 }
 
-void LedDriver::clearEffects() {
+void LedDriver::clearEffects()
+{
     _effects.clear();
 }
 
 void LedDriver::addOverlayBlink(uint16_t pixel, uint8_t r, uint8_t g, uint8_t b,
-                                uint8_t times, uint8_t delayMs) {
+                                uint8_t times, uint8_t delayMs)
+{
     OverlayEffect fx;
     fx.pixel = pixel;
     fx.r = r;
@@ -108,11 +148,77 @@ void LedDriver::addOverlayBlink(uint16_t pixel, uint8_t r, uint8_t g, uint8_t b,
     _overlays.push_back(fx);
 }
 
-void LedDriver::renderOverlay() {
+void LedDriver::renderFlash(const EffectConfig &cfg) {
+    static bool on = false;
+    static unsigned long lastTime = 0;
+    if (millis() - lastTime >= cfg.speed * 10) {
+        on = !on;
+        lastTime = millis();
+    }
+    for (uint16_t i = cfg.region.start; i <= cfg.region.end && i < _count; i++) {
+        _strip->setPixelColor(i, on ? scaleColor(cfg.r, cfg.g, cfg.b) : 0);
+    }
+}
+
+void LedDriver::renderBreathing(const EffectConfig &cfg) {
+    static float phase = 0;
+    phase += 0.05;
+    float brightness = (sin(phase) + 1.0) / 2.0;
+    for (uint16_t i = cfg.region.start; i <= cfg.region.end && i < _count; i++) {
+        _strip->setPixelColor(i, scaleColor(cfg.r * brightness, cfg.g * brightness, cfg.b * brightness));
+    }
+}
+
+void LedDriver::renderRandom(const EffectConfig &cfg) {
+    for (uint16_t i = cfg.region.start; i <= cfg.region.end && i < _count; i++) {
+        _strip->setPixelColor(i, random(2) ? scaleColor(cfg.r, cfg.g, cfg.b) : 0);
+    }
+    delay(cfg.speed * 2);
+}
+
+void LedDriver::renderTwinkle(const EffectConfig &cfg) {
+    for (uint16_t i = cfg.region.start; i <= cfg.region.end && i < _count; i++) {
+        if (random(10) > 8) {
+            _strip->setPixelColor(i, scaleColor(cfg.r, cfg.g, cfg.b));
+        }
+    }
+    delay(cfg.speed * 2);
+}
+
+void LedDriver::renderGradient(const EffectConfig &cfg) {
+    uint16_t len = cfg.region.end - cfg.region.start + 1;
+    for (uint16_t i = 0; i < len && cfg.region.start + i < _count; i++) {
+        float t = (float)i / len;
+        uint8_t r = cfg.r * t;
+        uint8_t g = cfg.g * (1 - t);
+        uint8_t b = cfg.b * t;
+        _strip->setPixelColor(cfg.region.start + i, scaleColor(r, g, b));
+    }
+}
+
+void LedDriver::renderBolide(const EffectConfig &cfg) {
+    static uint16_t pos = 0;
+    static unsigned long lastTime = 0;
+    if (millis() - lastTime < cfg.speed * 2) return;
+    lastTime = millis();
+    pos = (pos + 1) % (_count - 1);
+    for (uint16_t i = cfg.region.start; i <= cfg.region.end && i < _count; i++) {
+        _strip->setPixelColor(i, 0); // clear
+    }
+    if (cfg.region.start + pos < _count)
+        _strip->setPixelColor(cfg.region.start + pos, scaleColor(cfg.r, cfg.g, cfg.b));
+}
+
+
+void LedDriver::renderOverlay()
+{
     unsigned long now = millis();
-    for (auto &fx : _overlays) {
-        if (!fx.active) continue;
-        if (now - fx.lastMillis >= fx.delayMs) {
+    for (auto &fx : _overlays)
+    {
+        if (!fx.active)
+            continue;
+        if (now - fx.lastMillis >= fx.delayMs)
+        {
             fx.lastMillis = now;
             if (fx.isOn)
                 _strip->setPixelColor(fx.pixel, 0, 0, 0);
@@ -126,20 +232,21 @@ void LedDriver::renderOverlay() {
     }
     // Xóa hiệu ứng đã kết thúc
     _overlays.erase(std::remove_if(_overlays.begin(), _overlays.end(),
-                                   [](const OverlayEffect &fx) { return !fx.active; }),
+                                   [](const OverlayEffect &fx)
+                                   { return !fx.active; }),
                     _overlays.end());
 }
 
-
-bool LedDriver::applyEffectByName(const String &name) {
-    for (const auto &cfg : _effects) {
-        if (cfg.name.equalsIgnoreCase(name)) {
-            clearEffects();    // Xóa hết hiệu ứng cũ
-            addEffect(cfg);    // Thêm lại hiệu ứng được chọn
+bool LedDriver::applyEffectByName(const String &name)
+{
+    for (const auto &cfg : _effects)
+    {
+        if (cfg.name.equalsIgnoreCase(name))
+        {
+            clearEffects(); // Xóa hết hiệu ứng cũ
+            addEffect(cfg); // Thêm lại hiệu ứng được chọn
             return true;
         }
     }
     return false;
 }
-
-  
