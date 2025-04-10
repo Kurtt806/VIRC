@@ -21,7 +21,9 @@ struct EffectConfig
     uint8_t r = 255, g = 255, b = 255;
     int inputPin = -1;
     bool inputWifi = false;
+    bool enabled = true; // mới thêm
 };
+
 
 // --- Hiệu ứng chồng (overlay) ---
 struct OverlayEffect
@@ -47,6 +49,7 @@ public:
     bool applyEffectByName(const String &name);
     void setPixelColor(uint16_t index, uint8_t r, uint8_t g, uint8_t b);
     void show();
+    bool toggleEffectByName(const String &name, bool enable);
     void clearEffects();
 
     void loop();

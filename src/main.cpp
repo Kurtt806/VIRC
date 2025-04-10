@@ -50,6 +50,7 @@ void loadLedConfig()
 
   if (led)
   {
+
     delete led;
     led = nullptr;
   }
@@ -195,12 +196,40 @@ void initWebSocket()
           }
         }
       }
-    }
-  });
+      else if (msg.startsWith("SET_BRIGHTNESS:")) {
+        int b = msg.substring(strlen("SET_BRIGHTNESS:")).toInt();
+        if (b >= 0 && b <= 255 && led) {
+          led->setBrightness(b);
+          sendLogToClients("✨ Đã đổi độ sáng thành: " + String(b));
+          client->text("✅ Brightness set to " + String(b));
+        } else {
+          client->text("❌ Brightness không hợp lệ");
+        }
+      }
+      
+      else if (msg.startsWith("TOGGLE:")) 
+      {
+        int sep1 = msg.indexOf(':');
+        int sep2 = msg.indexOf(':', sep1 + 1);
+        if (sep1 > 0 && sep2 > sep1) 
+        {
+          String name = msg.substring(sep1 + 1, sep2);
+          bool enable = msg.substring(sep2 + 1) == "1";
+          if (led && led->toggleEffectByName(name, enable)) {
+              sendLogToClients("🔁 Đã " + String(enable ? "bật" : "tắt") + " hiệu ứng: " + name);
+              // TODO: Ghi vào file JSON toggle trạng thái
+          } 
+          else 
+          {
+              sendLogToClients("⚠️ Không tìm thấy hiệu ứng: " + name);
+          }
+        }
+      }
+
+    } });
 
   server.addHandler(&ws);
 }
-
 
 void initFileServer()
 {
@@ -303,21 +332,32 @@ void loop()
   static unsigned long lastSent = 0;
   if (led)
     led->loop();
-  
+
   unsigned long now = millis();
   if (now - lastSent >= 1000)
   {
     lastSent = now;
-    // Tạo JSON gửi về Web qua WebSocket
+
+    // Tạo JSON hệ thống
     String json = "{";
     json += "\"chip_id\":\"" + String((uint32_t)ESP.getEfuseMac(), HEX) + "\",";
     json += "\"mac\":\"" + WiFi.softAPmacAddress() + "\",";
     json += "\"flash_size\":" + String(ESP.getFlashChipSize() / 1024) + ",";
     json += "\"heap_free\":" + String(ESP.getFreeHeap()) + ",";
+    json += "\"heap_total\":" + String(ESP.getHeapSize()) + ",";
+    json += "\"flash_size\":" + String(ESP.getFlashChipSize() / 1024) + ",";
+    json += "\"max_alloc\":" + String(ESP.getMaxAllocHeap()) + ",";
     json += "\"cpu_freq\":" + String(ESP.getCpuFreqMHz()) + ",";
     json += "\"uptime\":\"" + String(millis() / 1000) + "s\"";
+
+#ifdef BOARD_HAS_PSRAM
+    json += ",\"psram_total\":" + String(ESP.getPsramSize());
+    json += ",\"psram_free\":" + String(ESP.getFreePsram());
+#endif
+
     json += "}";
 
+    // Gửi qua WebSocket
     ws.textAll("[SYSINFO]" + json);
   }
 }
