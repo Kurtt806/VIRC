@@ -5,6 +5,22 @@
 #include <Adafruit_NeoPixel.h>
 #include <Arduino.h>
 #include <vector>
+#include <vector>
+
+// Khai báo trạng thái hiệu ứng cho từng đoạn strip
+struct EffectState
+{
+    String effectName;
+    uint16_t regionStart;
+    uint16_t regionEnd;
+    unsigned long lastUpdate = 0;
+    bool on = false;
+    uint16_t pos = 0;
+    float phase = 0.0;
+};
+
+// Biến toàn cục lưu trạng thái từng hiệu ứng
+extern std::vector<EffectState> _effectStates;
 
 struct EffectRegion
 {
@@ -15,6 +31,7 @@ struct EffectRegion
 struct EffectConfig
 {
     String name;
+    String label = ""; // Nhãn hiển thị trên Web
     uint8_t size = 3;
     uint16_t speed = 20;
     EffectRegion region;
@@ -23,7 +40,6 @@ struct EffectConfig
     bool inputWifi = false;
     bool enabled = true; // mới thêm
 };
-
 
 // --- Hiệu ứng chồng (overlay) ---
 struct OverlayEffect
@@ -68,6 +84,7 @@ private:
     std::vector<EffectConfig> _effects;
     std::vector<OverlayEffect> _overlays;
 
+    EffectState &getEffectState(const EffectConfig &cfg); // 💡 cần khai báo để .cpp dùng được
     uint32_t scaleColor(uint8_t r, uint8_t g, uint8_t b);
     void renderBasic(const EffectConfig &cfg);
     void renderXRL(const EffectConfig &cfg);
@@ -78,6 +95,12 @@ private:
     void renderTwinkle(const EffectConfig &cfg);
     void renderGradient(const EffectConfig &cfg);
     void renderBolide(const EffectConfig &cfg);
+    void renderMeteor(const EffectConfig &cfg);
+    void renderWave(const EffectConfig &cfg);
+    void renderRainbow(const EffectConfig &cfg);
+    void renderTheaterChase(const EffectConfig &cfg);
+    uint32_t Wheel(byte);
+
     void renderOverlay();
 };
 

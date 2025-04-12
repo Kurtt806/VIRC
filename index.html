@@ -37,9 +37,8 @@
     .header-title {
       display: flex;
       align-items: center;
-      justify-content: flex-start;
       gap: 12px;
-      margin-bottom: 20px;
+      margin: 0;
     }
 
     .header-title img {
@@ -56,6 +55,7 @@
       margin: 0;
     }
 
+    /* Nút mặc định */
     button {
       background-color: #2c2c2c;
       color: #e0e0e0;
@@ -84,28 +84,6 @@
       border-radius: 5px;
       width: 100%;
       margin-top: 8px;
-    }
-
-    #uploadBox {
-      border: 2px dashed #ffd700;
-      background: #2c2c2c;
-      padding: 15px;
-      text-align: center;
-      cursor: pointer;
-      margin-top: 15px;
-      border-radius: 8px;
-    }
-
-    #uploadBox.dragover {
-      border-color: #fff176;
-      background: #3a3a3a;
-    }
-
-    #uploadStatus {
-      margin-top: 10px;
-      font-weight: bold;
-      text-align: center;
-      color: #ffd700;
     }
 
     .progress-bar-container {
@@ -163,54 +141,121 @@
     #heap_free_bar {
       background-color: #4caf50;
     }
-  
-.effect-toggle {
-  display: inline-block;
-  padding: 10px 15px;
-  margin: 6px;
-  border-radius: 8px;
-  font-weight: bold;
-  cursor: pointer;
-  user-select: none;
-  border: 2px solid #ffd700;
-  transition: background 0.2s, color 0.2s, border 0.2s;
-}
-.effect-toggle.active {
-  background-color: #ffd700;
-  color: #000;
-}
-.effect-toggle.inactive {
-  background-color: #444;
-  color: #aaa;
-  border-color: #666;
-}
 
-</style>
+    .effect-toggle {
+      display: inline-block;
+      padding: 10px 15px;
+      margin: 6px;
+      border-radius: 8px;
+      font-weight: bold;
+      cursor: pointer;
+      user-select: none;
+      border: 2px solid #ffd700;
+      transition: background 0.2s, color 0.2s, border 0.2s;
+    }
+
+    .effect-toggle.active {
+      background-color: #ffd700;
+      color: #000;
+    }
+
+    .effect-toggle.inactive {
+      background-color: #444;
+      color: #aaa;
+      border-color: #666;
+    }
+  </style>
 </head>
 
 <body>
   <div class="container">
-    <div class="header-title">
-      <img alt="logo" src="icon.png" />
-      <h2>VIRC- Controler Lightning RC</h2>
-    </div>
 
-    <div id="uploadArea" style="position: absolute; top: 20px; right: 20px; width: 250px; z-index: 10;">
-      <div id="uploadBox">📂 Kéo thả file config.cfg vào đây hoặc nhấn để chọn</div>
-      <input id="configFile" name="configFile" style="display:none;" type="file" />
-      <div id="uploadStatus"></div>
-    </div>
+    <!-- Gộp header-title và khối mới vào một row -->
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 20px;">
+      <!-- Logo + Tiêu đề bên trái -->
+      <div class="header-title">
+        <img alt="logo" src="icon.png" />
+        <h2>VIRC- Controler Lightning RC</h2>
+      </div>
 
+      <!-- Khối kéo-thả-file + Reconnect + Reset ở góc phải -->
+      <div style="max-width: 350px;">
+        <div style="margin-bottom: 20px;">
+          <div style="
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            align-items: center;
+            justify-content: space-between;
+            padding: 15px;
+            background: linear-gradient(135deg, #2c2c2c, #1e1e1e);
+            border: 2px dashed #ffd700;
+            border-radius: 12px;
+            box-shadow: 0 0 12px rgba(255, 215, 0, 0.3);
+          ">
+            <!-- Kéo thả -->
+            <label for="configFile" style="
+              flex: 1;
+              text-align: center;
+              padding: 10px 15px;
+              border-radius: 8px;
+              background: #333;
+              color: #ffd700;
+              border: 2px dashed #ffd700;
+              cursor: pointer;
+              transition: all 0.3s ease;
+            " onmouseover="this.style.background='#ffd700'; this.style.color='#000';"
+              onmouseout="this.style.background='#333'; this.style.color='#ffd700';">
+              📂 Kéo thả hoặc chọn file <code>config.cfg</code>
+              <input id="configFile" name="configFile" style="display:none;" type="file" />
+            </label>
+
+            <!-- Nút Reconnect -->
+            <button onclick="reconnectWebSocket()" style="
+              padding: 10px 18px;
+              border-radius: 8px;
+              background: #1e88e5;
+              color: white;
+              border: none;
+              font-weight: bold;
+              cursor: pointer;
+              transition: background 0.3s;
+            " onmouseover="this.style.background='#1565c0'" onmouseout="this.style.background='#1e88e5'">
+              🔌 Reconnect
+            </button>
+
+            <!-- Nút Reset -->
+            <button onclick="resetESP()" style="
+              padding: 10px 18px;
+              border-radius: 8px;
+              background: #e53935;
+              color: white;
+              border: none;
+              font-weight: bold;
+              cursor: pointer;
+              transition: background 0.3s;
+            " onmouseover="this.style.background='#c62828'" onmouseout="this.style.background='#e53935'">
+              ♻️ Reset
+            </button>
+          </div>
+
+          <!-- Thông báo trạng thái upload -->
+          <div id="uploadStatus" style="margin-top: 10px; font-weight: bold; text-align: center; color: #ffd700;"></div>
+        </div>
+      </div>
+    </div>
+    <!-- Hết header + khối cấu hình -->
+
+    <!-- Phần khung chính -->
     <div class="main-layout" style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; align-items: start;">
       <div class="left-panel">
         <div id="effectControl">
-          <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-            <button onclick="reconnectWebSocket()">🔁 Kết nối lại WebSocket</button>
-            <button onclick="resetESP()">🔄 Reset ESP</button>
-          </div>
           <div id="effectButtons" style="margin-top: 10px;"></div>
-          <input id="brightnessInput" placeholder="0-255" type="number" />
-          <button onclick="setBrightness()">✨ Set Brightness</button>
+          <div style="margin-top: 15px;">
+            <input type="range" id="brightnessSlider" min="0" max="255" value="128" style="width:100%;"
+              oninput="updateBrightnessValue(this.value)" onchange="setBrightness(this.value)">
+            <p style="text-align: center;">Brightness: <span id="brightnessValue">128</span></p>
+          </div>
         </div>
       </div>
 
@@ -245,102 +290,117 @@
       </div>
     </div>
   </div>
+
   <div class="logo-overlay" id="logoLayer">
     <img alt="VI3D Logo" src="logo_vi3d.jpeg" />
   </div>
 
   <script>
-    const ws = new WebSocket(`ws://${location.host}/ws`);
+    // Tạo kết nối WebSocket
 
-    ws.onopen = () => {
-      appendToConsole("✅ WebSocket đã kết nối");
-    };
+    let sysInfoTimeout;
+    let ws;
 
-    ws.onerror = (err) => {
-      appendToConsole("❌ Lỗi WebSocket: " + err.message);
-    };
+    function connectWebSocket() {
 
-    ws.onmessage = e => {
-      if (e.data.startsWith("[LOG]")) {
-        appendToConsole(e.data.replace("[LOG]", ""));
-        return;
-      }
+      ws = new WebSocket(`ws://${location.host}/ws`);
 
-      if (e.data.startsWith("[SYSINFO]")) {
-        const sysData = JSON.parse(e.data.replace("[SYSINFO]", ""));
+      ws.onopen = () => {
+        appendToConsole("=============== CONNECTED ================");
 
-        document.getElementById("chip_id").innerText = sysData.chip_id || "N/A";
-        document.getElementById("mac_addr").innerText = sysData.mac || "N/A";
+        // Reset timeout nếu có kết nối mới
+        clearTimeout(sysInfoTimeout);
 
-        const flashKB = sysData.flash_size || 0;
-        const heapFree = sysData.heap_free || 0;
-        const heapTotal = sysData.heap_total || 1;
-        const maxAlloc = sysData.max_alloc || 0;
-        const heapUsed = heapTotal - heapFree;
-        const heapPercent = Math.round((heapUsed / heapTotal) * 100);
+        // Bắt đầu đếm 3 giây chờ SYSINFO
+        sysInfoTimeout = setTimeout(() => {
+          appendToConsole("❌ Không nhận được SYSINFO, reconnecting...");
+          ws.close();
+        }, 3000);
+      };
 
+      ws.onerror = (err) => {
+        appendToConsole("❌ Lỗi WebSocket: " + err.message);
+      };
 
-        // Tính toán và định dạng đơn vị
-        function formatBytes(bytes) {
-          if (bytes >= 1048576) return (bytes / 1048576).toFixed(1) + " MB";
-          if (bytes >= 1024) return (bytes / 1024).toFixed(1) + " KB";
-          return bytes + " B";
+      ws.onclose = () => {
+        appendToConsole("🔌 Đã ngắt kết nối WebSocket, sẽ thử reconnect...");
+        setTimeout(connectWebSocket, 1000);
+      };
+
+      ws.onmessage = e => {
+        if (e.data.startsWith("[SYSINFO]")) {
+          clearTimeout(sysInfoTimeout); // nhận SYSINFO thì huỷ timeout
+          const sysData = JSON.parse(e.data.replace("[SYSINFO]", ""));
+
+          document.getElementById("chip_id").innerText = sysData.chip_id || "N/A";
+          document.getElementById("mac_addr").innerText = sysData.mac || "N/A";
+
+          const flashKB = sysData.flash_size || 0;
+          const heapFree = sysData.heap_free || 0;
+          const heapTotal = sysData.heap_total || 1;
+          const maxAlloc = sysData.max_alloc || 0;
+          const heapUsed = heapTotal - heapFree;
+          const heapPercent = Math.round((heapUsed / heapTotal) * 100);
+
+          function formatBytes(bytes) {
+            if (bytes >= 1048576) return (bytes / 1048576).toFixed(1) + " MB";
+            if (bytes >= 1024) return (bytes / 1024).toFixed(1) + " KB";
+            return bytes + " B";
+          }
+
+          const flashTotal = 4096;
+          document.getElementById("flash_size").innerText =
+            `${flashKB} KB đã dùng / ${flashTotal - flashKB} KB trống`;
+          document.getElementById("flash_progress").style.width =
+            Math.min(100, (flashKB / flashTotal) * 100) + "%";
+
+          document.getElementById("heap_used_label").innerText = formatBytes(heapUsed);
+          document.getElementById("heap_total_label").innerText = formatBytes(heapTotal);
+          document.getElementById("heap_percent").innerText = heapPercent;
+          document.getElementById("heap_used_bar").style.width = heapPercent + "%";
+          document.getElementById("max_alloc").innerText = maxAlloc + " B";
+          document.getElementById("cpu_freq").innerText = sysData.cpu_freq + " MHz";
+          document.getElementById("uptime").innerText = sysData.uptime;
+
+          if ('psram_total' in sysData) {
+            document.getElementById("psram_total").innerText = sysData.psram_total + " B";
+            document.getElementById("psram_free").innerText = sysData.psram_free + " B";
+          } else {
+            document.getElementById("psram_total").innerText = "N/A";
+            document.getElementById("psram_free").innerText = "N/A";
+          }
+
+          return;
         }
 
-        const flashTotal = 4096;
-const flashUsed = flashKB;
-const flashFree = flashTotal - flashUsed;
-document.getElementById("flash_size").innerText = `${flashUsed} KB đã dùng / ${flashFree} KB trống`;
-        document.getElementById("flash_progress").style.width = Math.min(100, (flashKB / 4096) * 100) + "%";
-
-        // Cập nhật số liệu trực quan
-        document.getElementById("heap_used_label").innerText = formatBytes(heapUsed);
-        document.getElementById("heap_total_label").innerText = formatBytes(heapTotal);
-        document.getElementById("heap_percent").innerText = heapPercent;
-
-        // Cập nhật progress bar (dạng chồng 2 lớp)
-        document.getElementById("heap_used_bar").style.width = heapPercent + "%";
-        document.getElementById("heap_used_bar").style.zIndex = 2;
-        document.getElementById("heap_free_bar").style.zIndex = 1;
-        document.getElementById("max_alloc").innerText = maxAlloc + " B";
-
-
-        document.getElementById("cpu_freq").innerText = sysData.cpu_freq + " MHz";
-        document.getElementById("uptime").innerText = sysData.uptime;
-
-        if ('psram_total' in sysData) {
-          document.getElementById("psram_total").innerText = sysData.psram_total + " B";
-          document.getElementById("psram_free").innerText = sysData.psram_free + " B";
-        } else {
-          document.getElementById("psram_total").innerText = "N/A";
-          document.getElementById("psram_free").innerText = "N/A";
+        // Nhận log
+        if (e.data.startsWith("[LOG]")) {
+          appendToConsole(e.data.replace("[LOG]", ""));
+          return;
         }
 
-
-        return;
-      }
-
-
-      if (e.data.startsWith("[EFFECT_LIST]")) {
-        const effects = e.data.replace("[EFFECT_LIST]", "").split(",");
-        const btnContainer = document.getElementById("effectButtons");
-        btnContainer.innerHTML = "";
-        effects.forEach(effect => {
-          const btn = document.createElement("button");
-          btn.innerText = `✨ ${effect}`;
-          btn.onclick = () => sendCommand("SET:" + effect);
-          btnContainer.appendChild(btn);
-        });
-        return;
-      }
-    };
+        // Nhận danh sách effect
+        if (e.data.startsWith("[EFFECT_LIST]")) {
+          const effects = e.data.replace("[EFFECT_LIST]", "").split(",");
+          const btnContainer = document.getElementById("effectButtons");
+          btnContainer.innerHTML = "";
+          effects.forEach(effect => {
+            const btn = document.createElement("button");
+            btn.innerText = `✨ ${effect}`;
+            btn.onclick = () => sendCommand("SET:" + effect);
+            btnContainer.appendChild(btn);
+          });
+          return;
+        }
+      };
+    }
 
     function sendCommand(cmd) {
       if (ws.readyState === WebSocket.OPEN) {
         ws.send(cmd);
-        appendToConsole(`[CMD] ${cmd}`);
+        appendToConsole(`[PUT] ${cmd}`);
       } else {
-        appendToConsole(`[ERR] WebSocket chưa sẵn sàng`);
+        appendToConsole(`❌ WebSocket chưa sẵn sàng`);
       }
     }
 
@@ -350,30 +410,106 @@ document.getElementById("flash_size").innerText = `${flashUsed} KB đã dùng / 
       logBox.scrollTop = logBox.scrollHeight;
     }
 
+    // Đặt độ sáng
     function setBrightness() {
       const b = document.getElementById("brightnessInput").value;
       sendCommand("SET_BRIGHTNESS:" + b);
     }
 
-    const uploadBox = document.getElementById("uploadBox");
-    const fileInput = document.getElementById("configFile");
+    // Sự kiện Reconnect
+    function reconnectWebSocket() {
+      appendToConsole("🔁 Đang kết nối lại WebSocket...");
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.close();
+      }
+      setTimeout(() => window.location.reload(), 500);
+    }
 
-    uploadBox.addEventListener("click", () => fileInput.click());
-    uploadBox.addEventListener("dragover", e => {
+
+    // Sự kiện Reset
+    function resetESP() {
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.send("RESET_ESP");
+        appendToConsole("🔁 Gửi yêu cầu reset ESP...");
+      } else {
+        appendToConsole("❌ WebSocket chưa sẵn sàng để reset");
+      }
+    }
+
+    // Cập nhật hiển thị giá trị slider thời gian thực
+    function updateBrightnessValue(val) {
+      document.getElementById('brightnessValue').innerText = val;
+    }
+
+    // Gửi lệnh set brightness khi slider thay đổi
+    function setBrightness(val) {
+      sendCommand("SET_BRIGHTNESS:" + val);
+    }
+
+    // Tự động load effect
+    function loadEffectButtons() {
+      fetch('/effect_list')
+        .then(res => res.json())
+        .then(effects => {
+          const container = document.getElementById("effectButtons");
+          container.innerHTML = "";
+
+          effects.forEach(effect => {
+            const div = document.createElement("div");
+            div.className = "effect-toggle active";
+            div.innerText = `✨ ${effect.label}`;  // 💡 dùng label
+            div.dataset.effect = effect.name;
+            div.dataset.enabled = "1";
+
+            div.onclick = () => {
+              const isEnabled = div.dataset.enabled === "1";
+              const newState = !isEnabled;
+
+              div.classList.toggle("active", newState);
+              div.classList.toggle("inactive", !newState);
+              div.dataset.enabled = newState ? "1" : "0";
+
+              sendCommand(`TOGGLE:${effect.name}:${newState ? 1 : 0}`);
+            };
+
+            container.appendChild(div);
+          });
+        })
+        .catch(err => {
+          console.error("Lỗi tải hiệu ứng:", err);
+          appendToConsole("❌ Không tải được danh sách hiệu ứng");
+        });
+    }
+
+
+    // Kéo thả file
+    const dropZone = document.querySelector("label[for='configFile']");
+
+    dropZone.addEventListener("dragover", (e) => {
       e.preventDefault();
-      uploadBox.classList.add("dragover");
+      dropZone.style.background = "#ffd700";
+      dropZone.style.color = "#000";
     });
-    uploadBox.addEventListener("dragleave", () => {
-      uploadBox.classList.remove("dragover");
-    });
-    uploadBox.addEventListener("drop", e => {
+
+    dropZone.addEventListener("dragleave", (e) => {
       e.preventDefault();
-      uploadBox.classList.remove("dragover");
-      if (e.dataTransfer.files.length) {
-        uploadFile(e.dataTransfer.files[0]);
+      dropZone.style.background = "#333";
+      dropZone.style.color = "#ffd700";
+    });
+
+    dropZone.addEventListener("drop", (e) => {
+      e.preventDefault();
+      dropZone.style.background = "#333";
+      dropZone.style.color = "#ffd700";
+
+      const file = e.dataTransfer.files[0];
+      if (file) {
+        uploadFile(file);
       }
     });
 
+    // Upload file config
+    const fileInput = document.getElementById("configFile");
     fileInput.addEventListener("change", () => {
       if (fileInput.files.length) {
         uploadFile(fileInput.files[0]);
@@ -383,7 +519,7 @@ document.getElementById("flash_size").innerText = `${flashUsed} KB đã dùng / 
     function uploadFile(file) {
       if (!file.name.endsWith(".cfg")) {
         document.getElementById("uploadStatus").style.color = "red";
-        document.getElementById("uploadStatus").innerText = "⚠️ Chỉ chấp nhận file .cfg!";
+        document.getElementById("uploadStatus").innerText = "❌ Chỉ chấp nhận file .cfg!";
         return;
       }
 
@@ -405,61 +541,11 @@ document.getElementById("flash_size").innerText = `${flashUsed} KB đã dùng / 
         });
     }
 
-
-    
-function loadEffectButtons() {
-  fetch('/effect_list')
-    .then(res => res.json())
-    .then(effects => {
-      const container = document.getElementById("effectButtons");
-      container.innerHTML = "";
-
-      effects.forEach(effect => {
-        const div = document.createElement("div");
-        div.className = "effect-toggle active";
-        div.innerText = `✨ ${effect}`;
-        div.dataset.effect = effect;
-        div.dataset.enabled = "1";
-
-        div.onclick = () => {
-          const isEnabled = div.dataset.enabled === "1";
-          const newState = !isEnabled;
-
-          div.classList.toggle("active", newState);
-          div.classList.toggle("inactive", !newState);
-          div.dataset.enabled = newState ? "1" : "0";
-
-          sendCommand(`TOGGLE:${effect}:${newState ? 1 : 0}`);
-        };
-
-        container.appendChild(div);
-      });
-    })
-    .catch(err => {
-      console.error("Lỗi tải hiệu ứng:", err);
-      appendToConsole("[ERR] Không tải được danh sách hiệu ứng");
+    window.addEventListener("load", () => {
+      connectWebSocket();
+      loadEffectButtons();
     });
-}
 
-
-    function reconnectWebSocket() {
-      appendToConsole("🔁 Đang kết nối lại WebSocket...");
-      if (ws && ws.readyState === WebSocket.OPEN) {
-        ws.close();
-      }
-      setTimeout(() => window.location.reload(), 500);
-    }
-
-    function resetESP() {
-      if (ws.readyState === WebSocket.OPEN) {
-        ws.send("RESET_ESP");
-        appendToConsole("🌀 Gửi yêu cầu reset ESP...");
-      } else {
-        appendToConsole("❌ WebSocket chưa sẵn sàng để reset");
-      }
-    }
-
-    window.addEventListener("load", loadEffectButtons);
   </script>
 </body>
 

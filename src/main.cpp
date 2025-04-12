@@ -71,6 +71,7 @@ void loadLedConfig()
 
     EffectConfig cfg;
     cfg.name = map.at("effect");
+    cfg.label = map.count("label") ? map.at("label") : cfg.name;
     cfg.region.start = map.at("ledstart").toInt();
     cfg.region.end = map.at("ledend").toInt();
     cfg.speed = map.count("speed") ? map.at("speed").toInt() : 20;
@@ -145,19 +146,21 @@ void setupWiFiAP()
 
 void sendListToClients()
 {
-  // Gửi thông tin về các hiệu ứng đã đinh nghĩa
+  // Gửi thông tin về các hiệu ứng đã định nghĩa
   String effects = "[EFFECT_LIST]";
   for (const auto &sec : vircCfg)
   {
     if (sec.first.startsWith("strip") && sec.second.count("effect"))
     {
-      effects += sec.second.at("effect") + ",";
+      String effect = sec.second.at("effect");
+      String label = sec.second.count("label") ? sec.second.at("label") : effect;
+      effects += effect + "|" + label + ",";
     }
   }
-  if (effects.endsWith(","))
-    effects.remove(effects.length() - 1); // bỏ dấu , cuối
+  if (effects.endsWith(",")) effects.remove(effects.length() - 1);
   ws.textAll(effects);
 }
+
 
 void initWebSocket()
 {
@@ -172,12 +175,12 @@ void initWebSocket()
       led->addOverlayBlink(0, 0, 0, 255, 1, 20); // chớp xanh pixel 0 ba lần
 
       if (msg == "REFRESH_EFFECT_LIST") {
-        sendLogToClients("📤 Đã gửi lại danh sách hiệu ứng sau khi upload virc.cfg");
+        sendLogToClients("✅ Đã gửi lại danh sách hiệu ứng virc.cfg");
         sendListToClients();
       }
       else if (msg == "RESET_ESP") {
-        sendLogToClients("🌀 ESP32 sẽ reset sau 1 giây...");
-        client->text("🌀 Resetting...");
+        sendLogToClients("🔁 ESP32 sẽ reset sau 1 giây...");
+        client->text("🔁 Resetting...");
         delay(1000);
         ESP.restart();
       }      
@@ -200,7 +203,7 @@ void initWebSocket()
         int b = msg.substring(strlen("SET_BRIGHTNESS:")).toInt();
         if (b >= 0 && b <= 255 && led) {
           led->setBrightness(b);
-          sendLogToClients("✨ Đã đổi độ sáng thành: " + String(b));
+          sendLogToClients("✅ Đã đổi độ sáng thành: " + String(b));
           client->text("✅ Brightness set to " + String(b));
         } else {
           client->text("❌ Brightness không hợp lệ");
@@ -221,7 +224,7 @@ void initWebSocket()
           } 
           else 
           {
-              sendLogToClients("⚠️ Không tìm thấy hiệu ứng: " + name);
+              sendLogToClients("❌ Không tìm thấy hiệu ứng: " + name);
           }
         }
       }
@@ -238,16 +241,18 @@ void initFileServer()
 
   server.on("/effect_list", HTTP_GET, [](AsyncWebServerRequest *request)
             {
-              sendLogToClients("Send effect_list");
+  sendLogToClients("📤 Send effect_list (with label)");
   String json = "[";
   for (const auto &sec : vircCfg)
   {
     if (sec.first.startsWith("strip") && sec.second.count("effect"))
     {
-      json += "\"" + sec.second.at("effect") + "\",";
+      String effect = sec.second.at("effect");
+      String label = sec.second.count("label") ? sec.second.at("label") : effect;
+      json += "{\"name\":\"" + effect + "\",\"label\":\"" + label + "\"},";
     }
   }
-  if (json.endsWith(",")) json.remove(json.length() - 1); // xóa dấu , cuối
+  if (json.endsWith(",")) json.remove(json.length() - 1);
   json += "]";
   request->send(200, "application/json", json); });
 
@@ -281,7 +286,7 @@ void initFileServer()
                         static File f;
                     
                         if (index == 0) {
-                          sendLogToClients("📥 Bắt đầu nhận file: " + filename);
+                          sendLogToClients("🔁 Bắt đầu nhận file: " + filename);
                           
                           if (SPIFFS.exists("/" + filename)) SPIFFS.remove("/" + filename);
                           f = SPIFFS.open("/" + filename, FILE_WRITE);
@@ -297,7 +302,7 @@ void initFileServer()
                     
                           // Tùy theo tên file, nạp lại cấu hình nếu cần
                           if (filename == "virc.cfg") {
-                            sendLogToClients("⏳ Nạp lại virc.cfg...");
+                            sendLogToClients("🔁 Nạp lại virc.cfg...");
                             delay(50);
                             loadLedConfig();
                             if (led) sendListToClients();
@@ -305,7 +310,7 @@ void initFileServer()
                           }
                     
                           else if (filename == "wifi.cfg") {
-                            sendLogToClients("⏳ Nạp lại wifi.cfg...");
+                            sendLogToClients("🔁 Nạp lại wifi.cfg...");
                             parseCfgFile("/wifi.cfg", wifiCfg);
                             sendLogToClients("✅ wifi.cfg đã nạp");
                           }
@@ -324,7 +329,7 @@ void setup()
   sendListToClients();
 
   Serial.println("Nội dung debug");
-  sendLogToClients("Nội dung debug");
+  sendLogToClients("Server Start =>");
 }
 
 void loop()
