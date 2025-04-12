@@ -235,7 +235,7 @@ void initWebSocket()
             int ledstart = map.at("ledstart").toInt();
             int ledend = map.at("ledend").toInt();
 
-            for (auto &cfg : led->getEffects()) {
+            for (auto &cfg : led->_effects) {
               if (cfg.name == effectName &&
                   cfg.region.start == ledstart &&
                   cfg.region.end == ledend) {
@@ -244,7 +244,7 @@ void initWebSocket()
                 break;
               }
             }
-          } 
+          }
         }
       }
  
@@ -275,7 +275,7 @@ void initFileServer()
     {
       String effect = sec.second.at("effect");
       String label = sec.second.count("label") ? sec.second.at("label") : effect;
-      json += "{\"id\":\"" + sec.first + "\",\"name\":\"" + effect + "\",\"label\":\"" + label + "\"},";
+      json += "{\"name\":\"" + effect + "\",\"label\":\"" + label + "\"},";
     }
   }
   if (json.endsWith(",")) json.remove(json.length() - 1);

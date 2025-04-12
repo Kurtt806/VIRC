@@ -58,6 +58,7 @@ class LedDriver
 {
 public:
     LedDriver(uint8_t pin, uint16_t count);
+    std::vector<EffectConfig>& getEffects();
 
     void begin();
     void setBrightness(uint8_t brightness);

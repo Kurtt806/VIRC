@@ -457,8 +457,8 @@
           effects.forEach(effect => {
             const div = document.createElement("div");
             div.className = "effect-toggle active";
-            div.innerText = `✨ ${effect.label}`;  // 💡 dùng label
-            div.dataset.effect = effect.name;
+            div.innerText = `✨ ${effect.label}`;
+            div.dataset.effectId = effect.id;
             div.dataset.enabled = "1";
 
             div.onclick = () => {
@@ -469,7 +469,12 @@
               div.classList.toggle("inactive", !newState);
               div.dataset.enabled = newState ? "1" : "0";
 
-              sendCommand(`TOGGLE:${effect.name}:${newState ? 1 : 0}`);
+              const effectId = div.dataset.effectId;
+              if (effectId && effectId !== "undefined") {
+                sendCommand(`TOGGLE_ID:${effectId}:${newState ? 1 : 0}`);
+              } else {
+                appendToConsole("❌ Không tìm thấy effect ID để gửi TOGGLE_ID");
+              }
             };
 
             container.appendChild(div);
@@ -480,6 +485,7 @@
           appendToConsole("❌ Không tải được danh sách hiệu ứng");
         });
     }
+
 
 
     // Kéo thả file

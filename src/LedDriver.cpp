@@ -1,10 +1,16 @@
 #include "LedDriver.h"
 std::vector<EffectState> _effectStates;
+std::vector<EffectConfig> &LedDriver::getEffects()
+{
+    return _effects;
+}
 
-
-EffectState& LedDriver::getEffectState(const EffectConfig &cfg) {
-    for(auto &state : _effectStates) {
-        if(state.effectName == cfg.name && state.regionStart == cfg.region.start && state.regionEnd == cfg.region.end) {
+EffectState &LedDriver::getEffectState(const EffectConfig &cfg)
+{
+    for (auto &state : _effectStates)
+    {
+        if (state.effectName == cfg.name && state.regionStart == cfg.region.start && state.regionEnd == cfg.region.end)
+        {
             return state;
         }
     }
@@ -16,7 +22,6 @@ EffectState& LedDriver::getEffectState(const EffectConfig &cfg) {
     _effectStates.push_back(newState);
     return _effectStates.back();
 }
-
 
 LedDriver::LedDriver(uint8_t pin, uint16_t count)
     : _pin(pin), _count(count), _brightness(255)
@@ -106,9 +111,6 @@ void LedDriver::loop()
     _strip->show();
     delay(20);
 }
-
-
-
 
 //=======================================================================
 //=======================================================================
@@ -269,31 +271,38 @@ void LedDriver::renderBolide(const EffectConfig &cfg)
         _strip->setPixelColor(cfg.region.start + pos, scaleColor(cfg.r, cfg.g, cfg.b));
 }
 
-void LedDriver::renderMeteor(const EffectConfig &cfg) {
+void LedDriver::renderMeteor(const EffectConfig &cfg)
+{
     static int pos = 0;
     static unsigned long lastTime = 0;
-    if (millis() - lastTime < cfg.speed) return;
+    if (millis() - lastTime < cfg.speed)
+        return;
     lastTime = millis();
 
-    for (uint16_t i = cfg.region.start; i <= cfg.region.end; i++) {
+    for (uint16_t i = cfg.region.start; i <= cfg.region.end; i++)
+    {
         _strip->setPixelColor(i, 0);
     }
 
-    for (int i = 0; i < cfg.size; i++) {
-        if ((pos - i) >= cfg.region.start && (pos - i) <= cfg.region.end) {
+    for (int i = 0; i < cfg.size; i++)
+    {
+        if ((pos - i) >= cfg.region.start && (pos - i) <= cfg.region.end)
+        {
             uint8_t brightness = 255 - (255 / cfg.size) * i;
             _strip->setPixelColor(pos - i, scaleColor(cfg.r * brightness / 255, cfg.g * brightness / 255, cfg.b * brightness / 255));
         }
     }
 
     pos--;
-    if (pos < cfg.region.start) pos = cfg.region.end;
+    if (pos < cfg.region.start)
+        pos = cfg.region.end;
 }
 
-
-void LedDriver::renderWave(const EffectConfig &cfg) {
+void LedDriver::renderWave(const EffectConfig &cfg)
+{
     static uint16_t offset = 0;
-    for (uint16_t i = cfg.region.start; i <= cfg.region.end; i++) {
+    for (uint16_t i = cfg.region.start; i <= cfg.region.end; i++)
+    {
         uint8_t brightness = (sin((i + offset) * 0.3) + 1) * 127;
         _strip->setPixelColor(i, scaleColor(cfg.r * brightness / 255, cfg.g * brightness / 255, cfg.b * brightness / 255));
     }
@@ -301,14 +310,15 @@ void LedDriver::renderWave(const EffectConfig &cfg) {
     delay(cfg.speed);
 }
 
-
-
-uint32_t LedDriver::Wheel(byte WheelPos) {
+uint32_t LedDriver::Wheel(byte WheelPos)
+{
     WheelPos = 255 - WheelPos;
-    if (WheelPos < 85) {
+    if (WheelPos < 85)
+    {
         return scaleColor(255 - WheelPos * 3, 0, WheelPos * 3);
     }
-    if (WheelPos < 170) {
+    if (WheelPos < 170)
+    {
         WheelPos -= 85;
         return scaleColor(0, WheelPos * 3, 255 - WheelPos * 3);
     }
@@ -316,30 +326,36 @@ uint32_t LedDriver::Wheel(byte WheelPos) {
     return scaleColor(WheelPos * 3, 255 - WheelPos * 3, 0);
 }
 
-
-void LedDriver::renderRainbow(const EffectConfig &cfg) {
+void LedDriver::renderRainbow(const EffectConfig &cfg)
+{
     static uint16_t offset = 0;
-    for (uint16_t i = cfg.region.start; i <= cfg.region.end; i++) {
+    for (uint16_t i = cfg.region.start; i <= cfg.region.end; i++)
+    {
         _strip->setPixelColor(i, Wheel((i + offset) & 255));
     }
     offset++;
     delay(cfg.speed);
 }
-void LedDriver::renderTheaterChase(const EffectConfig &cfg) {
+void LedDriver::renderTheaterChase(const EffectConfig &cfg)
+{
     static int j = 0;
     static unsigned long lastTime = 0;
-    if (millis() - lastTime < cfg.speed) return;
+    if (millis() - lastTime < cfg.speed)
+        return;
     lastTime = millis();
-    for (uint16_t i = cfg.region.start; i <= cfg.region.end; i++) {
-        if ((i + j) % 3 == 0) {
+    for (uint16_t i = cfg.region.start; i <= cfg.region.end; i++)
+    {
+        if ((i + j) % 3 == 0)
+        {
             _strip->setPixelColor(i, scaleColor(cfg.r, cfg.g, cfg.b));
-        } else {
+        }
+        else
+        {
             _strip->setPixelColor(i, 0);
         }
     }
     j = (j + 1) % 3;
 }
-
 
 void LedDriver::renderOverlay()
 {
